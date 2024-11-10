@@ -52,7 +52,7 @@ if __name__ == '__main__':
             path_test_image = arg
 
     with tf.device(device):
-        persisted_sess = tf.Session()
+        persisted_sess = tf.compat.v1.Session()
         inception_model_path = os.path.join('data', 'tensorflow_inception_graph.pb')
 
         if os.path.isfile(inception_model_path) == 0:
@@ -67,7 +67,7 @@ if __name__ == '__main__':
 
         # Load the Inception model
         with gfile.FastGFile(model, 'rb') as f:
-            graph_def = tf.GraphDef()
+            graph_def = tf.compat.v1.GraphDef()
             graph_def.ParseFromString(f.read())
             persisted_sess.graph.as_default()
             tf.import_graph_def(graph_def, name='')
@@ -126,16 +126,18 @@ if __name__ == '__main__':
         # Test the perturbation on the image
         labels = open(os.path.join('data', 'labels.txt'), 'r').read().split('\n')
 
-        image_original = preprocess_image_batch([path_test_image], img_size=(256, 256), crop_size=(224, 224), color_mode="rgb")
-        label_original = np.argmax(f(image_original), axis=1).flatten()
-        str_label_original = labels[np.int(label_original)-1].split(',')[0]
+        image_original = preprocess_image_batch([path_test_image], img_size=(256, 256, 3), crop_size=(224, 224), color_mode="rgb")
+        label_original = np.argmax(f(image_original), axis=1).flatten()[0]
+        print(label_original)
+        str_label_original = labels[int(label_original)-1].split(',')[0]
 
         # Clip the perturbation to make sure images fit in uint8
         clipped_v = np.clip(undo_image_avg(image_original[0,:,:,:]+v[0,:,:,:]), 0, 255) - np.clip(undo_image_avg(image_original[0,:,:,:]), 0, 255)
 
         image_perturbed = image_original + clipped_v[None, :, :, :]
-        label_perturbed = np.argmax(f(image_perturbed), axis=1).flatten()
-        str_label_perturbed = labels[np.int(label_perturbed)-1].split(',')[0]
+        label_perturbed = np.argmax(f(image_perturbed), axis=1).flatten()[0]
+        print(label_perturbed)
+        str_label_perturbed = labels[int(label_perturbed)-1].split(',')[0]
 
         # Show original and perturbed image
         plt.figure()
