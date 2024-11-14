@@ -1,3 +1,4 @@
 /env/*
 /python/data/*
 __pycache__
+model/data
