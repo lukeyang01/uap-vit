@@ -1,6 +1,6 @@
-/nv/*
-/python/data/*
-__pycache__
-data/
-/python/env
-checkpoints/
+*
+
+!*.py
+!*.md
+!.gitignore
+!.json

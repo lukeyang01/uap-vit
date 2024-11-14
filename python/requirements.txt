@@ -2,3 +2,5 @@ numpy
 tensorflow
 matplotlib
 opencv-python
+torch
+torchvision

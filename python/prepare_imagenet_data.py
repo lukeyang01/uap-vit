@@ -13,7 +13,7 @@ def preprocess_image_batch(image_paths, img_size=None, crop_size=None, color_mod
 
     for im_path in image_paths:
         img = cv2.imread(im_path)
-        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # convert default bgr format to rgb
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # imread uses bgr format by default
 
         if img_size:
             img = cv2.resize(img, img_size, interpolation=cv2.INTER_CUBIC)
