@@ -1,0 +1,37 @@
+{
+    "csv_file": "data/dogs.csv",
+    "augmented_csv_file": "data/augmented_dogs.csv",
+    "image_path": "data/images/",
+    "augmented_image_path": "data/augmented/",
+    "image_dim": 64,
+    "target": {
+        "checkpoint": "./checkpoints/target/",
+        "learning_rate": 1e-3,
+        "batch_size": 32,
+        "num_classes": 2
+    },
+    "vit": {
+        "checkpoint": "./checkpoints/vit/",
+        "learning_rate": 1e-3,
+        "batch_size": 32,
+        "num_classes": 2
+    },
+    "source": {
+        "checkpoint": "./checkpoints/source/",
+        "learning_rate": 1e-3,
+        "batch_size": 64,
+        "num_classes": 8
+    },
+    "challenge": {
+        "checkpoint": "./checkpoints/challenge/",
+        "learning_rate": 1e-3,
+        "batch_size": 32,
+        "num_classes": 2
+    },
+    "source_vit": {
+        "checkpoint": "./checkpoints/source_vit/",
+        "learning_rate": 1e-3,
+        "batch_size": 32,
+        "num_classes": 2
+    }
+}
