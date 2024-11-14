@@ -1,4 +1,6 @@
-/env/*
+/nv/*
 /python/data/*
 __pycache__
-model/data
+model/
+data/
+/python/env
