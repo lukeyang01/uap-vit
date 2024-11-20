@@ -33,6 +33,8 @@ if __name__ == "__main__":
                    num_heads=2,
                    num_hidden=16,
                    num_patches=16)
+    
+    # Question: why is VIT init with 2 classes by default?
 
 
     img = cv2.imread(args.input_image)
@@ -42,11 +44,6 @@ if __name__ == "__main__":
     if os.path.isfile(args.pert_weights) == 0:
         print("Computing Perturbation weights...")
         model, start_epoch, stats = restore_checkpoint(model, config("vit.checkpoint"))
-
-        # label_index = np.argmax(model(img))
-        # print(label_index)
-        # label = tr_loader[label_index]
-        # print(label)
 
         nb_epoch = 5
         eps = 10 / 255
@@ -64,23 +61,37 @@ if __name__ == "__main__":
         print("Found saved perturbation weights, loading...")
         uap = np.load(args.pert_weights)
 
-    uap = np.array(uap.reshape((64, 64, 3))) * 255
-    uap_img = img + np.array(uap*255)
+    transformed_uap = np.array(uap.reshape((64, 64, 3))) * 255
+    uap_img = img + np.array(transformed_uap)
+
+    # Find labels for both images
+    transformed_image = transforms.ToTensor()(img).reshape(1, 3, 64, 64)
+    img_out = model(transformed_image)
+    orig_label_index = torch.argmax(img_out, dim=1).item()
+    original_label = tr_loader.dataset.get_semantic_label(orig_label_index)
+
+    uap_tensor = transforms.ToTensor()(uap).reshape(1, 3, 64, 64)
+    uap_out = model(uap_tensor)
+    uap_label_index = torch.argmax(img_out, dim=1).item()
+    uap_label = tr_loader.dataset.get_semantic_label(uap_label_index)
+
 
     # visualize side by side
     plt.figure()
     plt.subplot(1, 2, 1)
+    plt.title(original_label)
     plt.imshow(img)
+    plt.axis('off')  # Turn off axes for a cleaner image
     
-
     plt.subplot(1, 2, 2)
+    plt.title(uap_label)
     plt.imshow((uap_img).astype(np.uint8), interpolation='none')
+    plt.axis('off')  # Turn off axes for a cleaner image
 
     # plt.show()
     # plot loss
     # plt.subplot(2, 2, 2)
     # plt.plot(losses)
 
-    plt.axis('off')  # Turn off axes for a cleaner image
     plt.savefig("uap_sidebyside.png", format='png', bbox_inches='tight')
     plt.show()
