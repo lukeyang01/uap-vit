@@ -39,18 +39,19 @@ if __name__ == "__main__":
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # imread uses bgr format by default
     img = cv2.resize(img, (64, 64), interpolation=cv2.INTER_CUBIC)
 
-    model, start_epoch, stats = restore_checkpoint(model, config("vit.checkpoint"))
-
-    # label_index = np.argmax(model(img))
-    # print(label_index)
-    # label = tr_loader[label_index]
-    # print(label)
-
-    nb_epoch = 5
-    eps = 10 / 255
-    beta = 10
-
     if os.path.isfile(args.pert_weights) == 0:
+        print("Computing Perturbation weights...")
+        model, start_epoch, stats = restore_checkpoint(model, config("vit.checkpoint"))
+
+        # label_index = np.argmax(model(img))
+        # print(label_index)
+        # label = tr_loader[label_index]
+        # print(label)
+
+        nb_epoch = 5
+        eps = 10 / 255
+        beta = 10
+    
         uap, losses = uap_sgd(model, tr_loader, nb_epoch, eps, beta)
 
         # visualize UAP
