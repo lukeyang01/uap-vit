@@ -15,7 +15,7 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--input_image', default='test_img.png', type=str)
-    parser.add_argument('--pert_weights', default='saved_pert.npy', type=str)
+    parser.add_argument('--pert_weights', default='', type=str)
 
     return parser.parse_args()
 
@@ -49,14 +49,21 @@ if __name__ == "__main__":
     nb_epoch = 5
     eps = 10 / 255
     beta = 10
-    uap, losses = uap_sgd(model, tr_loader, nb_epoch, eps, beta)
 
-    # visualize UAP
-    plt.imshow(np.transpose(((uap / eps) + 1) / 2, (1, 2, 0)))    
-    plt.axis('off')  # Turn off axes for a cleaner image
-    plt.savefig("uap_image.png", format='png', bbox_inches='tight')
-    
-    uap = uap.reshape((64, 64, 3))
+    if os.path.isfile(args.pert_weights) == 0:
+        uap, losses = uap_sgd(model, tr_loader, nb_epoch, eps, beta)
+
+        # visualize UAP
+        plt.imshow(np.transpose(((uap / eps) + 1) / 2, (1, 2, 0)))    
+        plt.axis('off')  # Turn off axes for a cleaner image
+        plt.savefig("uap_image.png", format='png', bbox_inches='tight')
+
+        np.save(os.path.join('data', 'imagenet_data.npy'), uap)
+    else:
+        print("Found saved perturbation weights, loading...")
+        uap = np.load(args.pert_weights)
+
+    uap = np.array(uap.reshape((64, 64, 3))) * 255
     uap_img = img + np.array(uap*255)
 
     # visualize side by side
