@@ -7,9 +7,10 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 from matplotlib import pyplot as plt
-from torchvision.models import vit_b_16
+from torchvision.models import vit_b_16, ViT_B_16_Weights
 import argparse
 import cv2
+from imagenet_dataset import ImageNet100Dataset
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -22,29 +23,37 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
-    # model = vit_b_16()
 
-    tr_loader, va_loader, te_loader, _ = get_train_val_test_loaders(
-        task="target",
-        batch_size=config("vit.batch_size"),
-    )
+    model = vit_b_16(weights=ViT_B_16_Weights.DEFAULT)
 
-    model = ViT(num_blocks=2,
-                   num_heads=2,
-                   num_hidden=16,
-                   num_patches=16)
-    
-    # Question: why is VIT init with 2 classes by default?
+    # Example transforms
+    transform = transforms.Compose([
+        transforms.Resize((224, 224)),  # Resize images to 224x224 (e.g., for models like ResNet)
+        transforms.ToTensor(),          # Convert image to tensor
+        transforms.Normalize(mean=[0.485, 0.456, 0.406],  # Normalize using ImageNet stats
+                            std=[0.229, 0.224, 0.225])
+    ])
 
+    # Paths
+    root_dir = "data/Imagenet100"
+    labels_file = os.path.join(root_dir, "Labels.json")
+
+    # Train dataset and dataloader
+    train_dataset = ImageNet100Dataset(root_dir=root_dir, subset="train.X1", labels_file=labels_file, transform=transform)
+    tr_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
+
+    # Validation dataset and dataloader
+    # val_dataset = ImageNet100Dataset(root_dir=root_dir, subset="val.X", labels_file=labels_file, transform=transform)
+    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
 
     img = cv2.imread(args.input_image)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # imread uses bgr format by default
-    img = cv2.resize(img, (64, 64), interpolation=cv2.INTER_CUBIC)
+    img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_CUBIC)
 
+    # Calculate UAP
     if os.path.isfile(args.pert_weights) == 0:
         print("Computing Perturbation weights...")
-        model, start_epoch, stats = restore_checkpoint(model, config("vit.checkpoint"))
-
+        # model, start_epoch, stats = restore_checkpoint(model, config("vit.checkpoint"))
         nb_epoch = 5
         eps = 10 / 255
         beta = 10
@@ -61,19 +70,19 @@ if __name__ == "__main__":
         print("Found saved perturbation weights, loading...")
         uap = np.load(args.pert_weights)
 
-    transformed_uap = np.array(uap.reshape((64, 64, 3))) * 255
+    transformed_uap = np.array(uap.reshape((224, 224, 3))) * 255
     uap_img = img + np.array(transformed_uap)
 
     # Find labels for both images
-    transformed_image = transforms.ToTensor()(img).reshape(1, 3, 64, 64)
+    transformed_image = transforms.ToTensor()(img).reshape(1, 3, 224, 224)
     img_out = model(transformed_image)
     orig_label_index = torch.argmax(img_out, dim=1).item()
-    original_label = tr_loader.dataset.get_semantic_label(orig_label_index)
+    original_label = tr_loader.dataset.get_label(orig_label_index)
 
-    uap_tensor = transforms.ToTensor()(uap).reshape(1, 3, 64, 64)
+    uap_tensor = transforms.ToTensor()(uap).reshape(1, 3, 224, 224)
     uap_out = model(uap_tensor)
     uap_label_index = torch.argmax(img_out, dim=1).item()
-    uap_label = tr_loader.dataset.get_semantic_label(uap_label_index)
+    uap_label = tr_loader.dataset.get_label(uap_label_index)
 
 
     # visualize side by side

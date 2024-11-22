@@ -117,6 +117,8 @@ def uap_sgd(model, loader, nb_epoch, eps, beta = 12, step_decay = 0.8, y_target 
     batch_delta.requires_grad = True
     delta = batch_delta[0]
     losses = []
+
+    nb_batches = len(loader)
     
     # loss function
     if layer_name is None:
@@ -143,7 +145,7 @@ def uap_sgd(model, loader, nb_epoch, eps, beta = 12, step_decay = 0.8, y_target 
         eps_step = eps * step_decay
         print("Starting...")
         for i, (x_val, y_val) in enumerate(loader):
-            print(f"\rBatch {i}")
+            print(f"\rBatch {i}/{nb_batches}")
             if x_val.shape[0] == 12:
                 continue            
             # if batch_delta.grad is not None and batch_delta.grad.data is not None:
