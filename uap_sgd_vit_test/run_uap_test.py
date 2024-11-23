@@ -12,6 +12,8 @@ import argparse
 import cv2
 from imagenet_dataset import ImageNet100Dataset
 
+import time
+
 def get_args():
     parser = argparse.ArgumentParser()
 
@@ -23,8 +25,8 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
-
-    model = vit_b_16(weights=ViT_B_16_Weights.DEFAULT)
+    weights = ViT_B_16_Weights.DEFAULT
+    model = vit_b_16(weights=weights)
 
     # Example transforms
     transform = transforms.Compose([
@@ -40,7 +42,7 @@ if __name__ == "__main__":
 
     # Train dataset and dataloader
     train_dataset = ImageNet100Dataset(root_dir=root_dir, subset="train.X1", labels_file=labels_file, transform=transform)
-    tr_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0)
+    tr_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, drop_last=True)
 
     # Validation dataset and dataloader
     # val_dataset = ImageNet100Dataset(root_dir=root_dir, subset="val.X", labels_file=labels_file, transform=transform)
@@ -57,8 +59,12 @@ if __name__ == "__main__":
         nb_epoch = 5
         eps = 10 / 255
         beta = 10
+
+        # start_time = time.time()
     
         uap, losses = uap_sgd(model, tr_loader, nb_epoch, eps, beta)
+
+        # print("Finished training, took ", time.time()-start_time, "seconds to run.")
 
         # visualize UAP
         plt.imshow(np.transpose(((uap / eps) + 1) / 2, (1, 2, 0)))    
@@ -75,25 +81,31 @@ if __name__ == "__main__":
 
     # Find labels for both images
     transformed_image = transforms.ToTensor()(img).reshape(1, 3, 224, 224)
-    img_out = model(transformed_image)
-    orig_label_index = torch.argmax(img_out, dim=1).item()
-    original_label = tr_loader.dataset.get_label(orig_label_index)
+    img_prediction = model(transformed_image).squeeze(0).softmax(0)
+    img_class_id = img_prediction.argmax().item()
+    img_score = img_prediction[img_class_id].item()
+    img_category_name = weights.meta["categories"][img_class_id]
+    print(f"ORIG: {img_category_name}: {100 * img_score:.1f}%")
 
-    uap_tensor = transforms.ToTensor()(uap).reshape(1, 3, 224, 224)
-    uap_out = model(uap_tensor)
-    uap_label_index = torch.argmax(img_out, dim=1).item()
-    uap_label = tr_loader.dataset.get_label(uap_label_index)
+    uap_tensor = transforms.ToTensor()(uap_img).reshape(1, 3, 224, 224)
+    uap_prediction = model(uap_tensor).squeeze(0).softmax(0)
+    uap_class_id = uap_prediction.argmax().item()
+    uap_score = uap_prediction[uap_class_id].item()
+    uap_category_name = weights.meta["categories"][uap_class_id]
+    print(f"UAP: {uap_category_name}: {100 * uap_score:.1f}%")
+
+
 
 
     # visualize side by side
     plt.figure()
     plt.subplot(1, 2, 1)
-    plt.title(original_label)
+    plt.title(img_category_name)
     plt.imshow(img)
     plt.axis('off')  # Turn off axes for a cleaner image
     
     plt.subplot(1, 2, 2)
-    plt.title(uap_label)
+    plt.title(uap_category_name)
     plt.imshow((uap_img).astype(np.uint8), interpolation='none')
     plt.axis('off')  # Turn off axes for a cleaner image
 
