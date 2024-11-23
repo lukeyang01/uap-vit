@@ -17,8 +17,9 @@ import time
 def get_args():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--input_image', default='test_img.png', type=str)
-    parser.add_argument('--pert_weights', default='', type=str)
+    parser.add_argument('-i', '--input_image', default='test_img.png', type=str)
+    parser.add_argument('-w', '--pert_weights', default='', type=str)
+    parser.add_argument('--validate', action='store_true')
 
     return parser.parse_args()
 
@@ -45,8 +46,8 @@ if __name__ == "__main__":
     tr_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=0, drop_last=True)
 
     # Validation dataset and dataloader
-    # val_dataset = ImageNet100Dataset(root_dir=root_dir, subset="val.X", labels_file=labels_file, transform=transform)
-    # val_loader = DataLoader(val_dataset, batch_size=32, shuffle=False, num_workers=4)
+    val_dataset = ImageNet100Dataset(root_dir=root_dir, subset="val.X", labels_file=labels_file, transform=transform)
+    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False, num_workers=4)
 
     img = cv2.imread(args.input_image)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # imread uses bgr format by default
@@ -76,26 +77,45 @@ if __name__ == "__main__":
         print("Found saved perturbation weights, loading...")
         uap = np.load(args.pert_weights)
 
+    # Apply UAP to original img
     transformed_uap = np.array(uap.reshape((224, 224, 3))) * 255
     uap_img = img + np.array(transformed_uap)
 
+    def extract_label(input_batch):
+        prediction = model(input_batch).squeeze(0).softmax(0)
+        class_id = prediction.argmax().item()
+        img_score = prediction[class_id].item()
+        img_category_name = weights.meta["categories"][class_id]
+        return (img_category_name, img_score)
+
     # Find labels for both images
     transformed_image = transforms.ToTensor()(img).reshape(1, 3, 224, 224)
-    img_prediction = model(transformed_image).squeeze(0).softmax(0)
-    img_class_id = img_prediction.argmax().item()
-    img_score = img_prediction[img_class_id].item()
-    img_category_name = weights.meta["categories"][img_class_id]
+    img_category_name, img_score = extract_label(transformed_image)
     print(f"ORIG: {img_category_name}: {100 * img_score:.1f}%")
 
-    uap_tensor = transforms.ToTensor()(uap_img).reshape(1, 3, 224, 224)
-    uap_prediction = model(uap_tensor).squeeze(0).softmax(0)
-    uap_class_id = uap_prediction.argmax().item()
-    uap_score = uap_prediction[uap_class_id].item()
-    uap_category_name = weights.meta["categories"][uap_class_id]
+    transformed_uap = transforms.ToTensor()(uap_img).reshape(1, 3, 224, 224)
+    uap_category_name, uap_score = extract_label(transformed_uap)
     print(f"UAP: {uap_category_name}: {100 * uap_score:.1f}%")
 
+    # Calculate fooling rate of validation set
+    if args.validate:
+        print("Validating...")
+        score = 0
+        total = len(val_loader)
+        for i, (X, _) in enumerate(val_loader):
+            print(f"{i}/{total} Done...")
 
+            orig_label, _ = extract_label(X)
+            uap_X = X + transformed_uap
+            uap_label, _ = extract_label(uap_X)
 
+            print(orig_label, uap_label)
+
+            if orig_label != uap_label:
+                score += 1
+            
+        fooling_rate = score / total
+        print(f"Fooling Rate: {100*fooling_rate:.1f}%")
 
     # visualize side by side
     plt.figure()
