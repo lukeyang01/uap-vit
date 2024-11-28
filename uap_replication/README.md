@@ -8,12 +8,6 @@ This is where we're recreating the results of Moosavi-Dezfooli et al.'s original
 2. Run reformat_validation_data.py.
 3. Run 
 
-
-1. Run extract-validation-data.ipynb and extract-test-data.ipynb on Kaggle. Download an unzip the output.
-2. Run extract-test-data.ipynb on Kaggle. Download 
-
-
-
 ## Experiment 1
 
 From [M16]:
