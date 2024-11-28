@@ -5,6 +5,7 @@
 
 
 import itertools
+import time
 import numpy as np
 import torchvision.models as tvm
 import data
@@ -18,19 +19,18 @@ MODELS = (
 )
 
 XI = (1000, )
-P = (2, )
+P = (np.inf, )
 
 TRAINING_PATH = "imagenet_data/ILSVRC/Data/CLS-LOC/train"
-TRAINING_SIZE = 1 # Number of images to train on.
+TRAINING_SIZE = 1000 # Number of images to train on.
 
 VALIDATION_PATH = "imagenet_data/ILSVRC/Data/CLS-LOC/val"
 VALIDATION_SIZE = 100 # Number of images to validate on.
 
-SAVE_PATH = "compute_uaps/"
 
-
+start = time.time()
 for ((name, weights, model_func), xi, p) in itertools.product(MODELS, XI, P):
-    summary = f"uap_xi_{xi}_p_{p}_{name}"
+    summary = f"uap_x_{TRAINING_SIZE}_xi_{xi}_p_{p}_{name}"
     print(f"Fooling Model {summary}")
     
     print("Initializing Model")
@@ -40,15 +40,12 @@ for ((name, weights, model_func), xi, p) in itertools.product(MODELS, XI, P):
     print("Loading Data")
     transforms = weights.transforms()
     train = data.load_random_subset(TRAINING_PATH, TRAINING_SIZE, transforms)
-    # valid = data.load_random_subset(VALIDATION_PATH, VALIDATION_SIZE, transforms)
 
     print("Computing UAP")
-    cb = lambda (i, v): data.save_uap(v, f"{summary}_{i}.pt")
+    cb = lambda i, v: data.save_uap(v, f"{summary}_{i}.pt")
     v = uap.compute_uap(train, clf, cb=cb, max_iter=5, xi=xi, p=p)
 
     print("Saving UAP")
     data.save_uap(v, f"{summary}.pt")
 
-    # print("Computing Fooling Rate")
-    # rate = uap.compute_fooling_rate()
-    # print(f"(Model; Fooling Rate) = ({model.__name__}; {rate}")
+    print(f"Runtime: {time.time() - start} Seconds")

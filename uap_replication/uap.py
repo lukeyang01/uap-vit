@@ -17,7 +17,7 @@ def estimate_fooling_rate(dataset, clf, v):
 
 
 # See Algorithm 2 in arxiv.org/pdf/1511.04599.
-def deepfool(img, clf, num_classes=10, overshoot=0.02, max_iter=50):
+def deepfool(img, clf, num_classes=5, overshoot=0.02, max_iter=50):
     # Get indices of the n likeliest classes for img (where n = num_classes).
     I = clf(img)[0].argsort().flip(0)[0:num_classes]
 
@@ -77,7 +77,7 @@ def proj_lp(v, xi, p):
 
 
 # See Algorithm 1 in arxiv.org/pdf/1610.08401.
-def compute_uap(dataset, clf, cb=None, delta=0.2, max_iter=np.inf, xi=10, p=np.inf, num_classes=10, overshoot=0.02, max_iter_df=50):
+def compute_uap(dataset, clf, cb=None, delta=0.2, max_iter=np.inf, xi=10, p=np.inf, num_classes=5, overshoot=0.02, max_iter_df=50):
     est_fooling_rate = 0
     v = 0
     i = 0
