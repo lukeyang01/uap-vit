@@ -11,6 +11,7 @@ import torchvision.models as tvm
 import data
 import uap
 
+
 MODELS = (
     ("GoogLeNet", tvm.GoogLeNet_Weights.IMAGENET1K_V1, lambda w: tvm.googlenet(weights=w)),
     # ("ResNet", tvm.ResNet152_Weights.IMAGENET1K_V2, lambda w: tvm.resnet152(weights=w)),
@@ -43,7 +44,11 @@ for ((name, weights, model_func), xi, p) in itertools.product(MODELS, XI, P):
 
     print("Computing UAP")
     cb = lambda i, v: data.save_uap(v, f"{summary}_{i}.pt")
-    v = uap.compute_uap(train, clf, cb=cb, max_iter=5, xi=xi, p=p)
+
+    try:
+        v = uap.compute_uap(train, clf, cb=cb, max_iter=5, xi=xi, p=p)
+    except KeyboardInterrupt:
+        print("Received KeyboardInterrupt")
 
     print("Saving UAP")
     data.save_uap(v, f"{summary}.pt")
