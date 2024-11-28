@@ -44,11 +44,7 @@ for ((name, weights, model_func), xi, p) in itertools.product(MODELS, XI, P):
 
     print("Computing UAP")
     cb = lambda i, v: data.save_uap(v, f"{summary}_{i}.pt")
-
-    try:
-        v = uap.compute_uap(train, clf, cb=cb, max_iter=5, xi=xi, p=p)
-    except KeyboardInterrupt:
-        print("Received KeyboardInterrupt")
+    v = uap.compute_uap(train, clf, cb=cb, max_iter=5, xi=xi, p=p)
 
     print("Saving UAP")
     data.save_uap(v, f"{summary}.pt")

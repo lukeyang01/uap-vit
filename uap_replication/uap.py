@@ -34,24 +34,18 @@ def deepfool(img, clf, num_classes=5, overshoot=0.02, max_iter=50):
         if out.argmax() != I[0]:
             break
 
-        # Let grad_0 be the gradient of pert_img's I[0]th activiation. 
+        # j[k] is the gradient of pert_img's I[k]th activiation.
         clf.zero_grad()
-        out[0, I[0]].backward(retain_graph=True)
-        grad_0 = pert_img.grad.detach().numpy().copy()
+        j = torch.autograd.functional.jacobian(lambda t: clf(t)[0][I], pert_img)
+        j = j.detach().numpy().copy()
 
         # Compute r_i as in the paper.
         w_badness = np.inf
         w = None
-
         for k in range(1, num_classes):
-            clf.zero_grad()
-            out[0, I[k]].backward(retain_graph=True)
-            grad_k = pert_img.grad.detach().numpy().copy()
-
-            w_k = grad_k - grad_0
+            w_k = j[k] - j[0]
             f_k = (out[0, I[k]] - out[0, I[0]]).detach().numpy()
             w_k_badness = abs(f_k) / np.linalg.norm(w_k)
-
             if w_k_badness < w_badness:
                 w_badness = w_k_badness
                 w = w_k
@@ -59,8 +53,6 @@ def deepfool(img, clf, num_classes=5, overshoot=0.02, max_iter=50):
         r_i = (w_badness + 1e-4) * w / np.linalg.norm(w)
         r += r_i
         i += 1
-    
-    print(f"DeepFool Exiting After {i} Iterations")
 
     return torch.Tensor((1 + overshoot) * r), i
 
@@ -70,7 +62,7 @@ def proj_lp(v, xi, p):
     if p == 2:
         v = v * min(1, xi/np.linalg.norm(v.flatten()))
     elif p == np.inf:
-        v = np.sign(v) * np.minimum(abs(v.flatten()), xi)
+        v = np.sign(v) * np.minimum(abs(v), xi)
     else:
         raise ValueError('Values of p different from 2 and Inf are currently not supported...')
     return v
@@ -88,11 +80,13 @@ def compute_uap(dataset, clf, cb=None, delta=0.2, max_iter=np.inf, xi=10, p=np.i
 
         loader = DataLoader(dataset, shuffle=True)
         convergences = 0
+        deepfools = 0
         for count, (img, _) in enumerate(loader, start=1):
             orig_cls = clf(img).argmax()
             pert_cls = clf(img+v).argmax()
 
             if orig_cls == pert_cls:
+                deepfools += 1
                 delta_v, iterations = deepfool(img+v, clf, num_classes, overshoot, max_iter_df)
                 if iterations < max_iter_df-1:
                     convergences += 1
@@ -100,7 +94,7 @@ def compute_uap(dataset, clf, cb=None, delta=0.2, max_iter=np.inf, xi=10, p=np.i
                     v = proj_lp(v, xi, p)
 
             if count % 10 == 0:
-                print(f"{convergences} Convergences in {count} Images")
+                print(f"{convergences} Convergences / {deepfools} Deepfools / {count} Images")
 
         if cb:
             cb(i, v)
