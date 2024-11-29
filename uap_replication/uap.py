@@ -35,7 +35,6 @@ def deepfool(img, clf, num_classes=5, overshoot=0.02, max_iter=50):
             break
 
         # j[k] is the gradient of pert_img's I[k]th activiation.
-        clf.zero_grad()
         j = torch.autograd.functional.jacobian(lambda t: clf(t)[0][I], pert_img)
         j = j.detach().numpy().copy()
 

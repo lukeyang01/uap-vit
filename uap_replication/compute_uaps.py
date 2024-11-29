@@ -19,18 +19,14 @@ MODELS = (
     # ("VGG19", tvm.VGG19_Weights.IMAGENET1K_V1, lambda w: tvm.vgg19(weights=w))
 )
 
-XI = (1000, )
-P = (np.inf, )
+XI_P = ((30, 2), )
 
 TRAINING_PATH = "imagenet_data/ILSVRC/Data/CLS-LOC/train"
-TRAINING_SIZE = 1000 # Number of images to train on.
-
-VALIDATION_PATH = "imagenet_data/ILSVRC/Data/CLS-LOC/val"
-VALIDATION_SIZE = 100 # Number of images to validate on.
+TRAINING_SIZE = 10_000 # Number of images to train on.
 
 
 start = time.time()
-for ((name, weights, model_func), xi, p) in itertools.product(MODELS, XI, P):
+for ((name, weights, model_func), (xi, p)) in itertools.product(MODELS, XI_P):
     summary = f"uap_x_{TRAINING_SIZE}_xi_{xi}_p_{p}_{name}"
     print(f"Fooling Model {summary}")
     
@@ -44,7 +40,7 @@ for ((name, weights, model_func), xi, p) in itertools.product(MODELS, XI, P):
 
     print("Computing UAP")
     cb = lambda i, v: data.save_uap(v, f"{summary}_{i}.pt")
-    v = uap.compute_uap(train, clf, cb=cb, max_iter=5, xi=xi, p=p)
+    v = uap.compute_uap(train, clf, cb=cb, num_classes=5, max_iter=10, xi=xi, p=p)
 
     print("Saving UAP")
     data.save_uap(v, f"{summary}.pt")
