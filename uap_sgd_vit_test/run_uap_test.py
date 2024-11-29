@@ -7,7 +7,7 @@ from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 
 from matplotlib import pyplot as plt
-from torchvision.models import vit_b_16, ViT_B_16_Weights
+from torchvision.models import vit_b_16, ViT_B_16_Weights, vit_b_32, ViT_B_32_Weights, vit_l_16, ViT_L_16_Weights, vit_l_32, ViT_L_32_Weights
 import argparse
 import cv2
 from imagenet_dataset import ImageNet100Dataset
@@ -17,6 +17,7 @@ import time
 def get_args():
     parser = argparse.ArgumentParser()
 
+    parser.add_argument('-m', '--model', default='vit_b_16', type=str)
     parser.add_argument('-i', '--input_image', default='test_img.png', type=str)
     parser.add_argument('-w', '--pert_weights', default='', type=str)
     parser.add_argument('--validate', action='store_true')
@@ -26,8 +27,25 @@ def get_args():
 if __name__ == "__main__":
     args = get_args()
 
-    weights = ViT_B_16_Weights.DEFAULT
-    model = vit_b_16(weights=weights)
+    weights = None
+    model = None
+
+    if args.model == 'vit_b_16':
+        print("Loading vit_b_16...")
+        weights = ViT_B_16_Weights.DEFAULT
+        model = vit_b_16(weights=weights)
+    elif args.model == 'vit_b_32':
+        print("Loading vit_b_32...")
+        weights = ViT_B_32_Weights.DEFAULT
+        model = vit_b_32(weights=weights)
+    elif args.model == 'vit_l_16':
+        print("Loading vit_l_16...")
+        weights = ViT_L_16_Weights.DEFAULT
+        model = vit_l_16(weights=weights)
+    elif args.model == 'vit_l_32':
+        print("Loading vit_l_32...")
+        weights = ViT_L_32_Weights.DEFAULT
+        model = vit_l_32(weights=weights)
 
     # Example transforms
     transform = transforms.Compose([
@@ -72,14 +90,14 @@ if __name__ == "__main__":
         plt.axis('off')  # Turn off axes for a cleaner image
         plt.savefig("uap_image.png", format='png', bbox_inches='tight')
 
-        np.save(os.path.join('data', 'imagenet_data.npy'), uap)
+        np.save(args.pert_weights, uap)
     else:
         print("Found saved perturbation weights, loading...")
         uap = np.load(args.pert_weights)
 
     # Apply UAP to original img
-    transformed_uap = np.array(uap.reshape((224, 224, 3))) * 255
-    uap_img = img + np.array(transformed_uap)
+    uap_filter = np.array(uap.reshape((224, 224, 3))) * 255
+    uap_img = img + np.array(uap_filter)
 
     def extract_label(input_batch):
         prediction = model(input_batch).squeeze(0).softmax(0)
@@ -106,7 +124,7 @@ if __name__ == "__main__":
             print(f"{i}/{total} Done...")
 
             orig_label, _ = extract_label(X)
-            uap_X = X + transformed_uap
+            uap_X = X + uap_filter.reshape(1, 3, 224, 224)
             uap_label, _ = extract_label(uap_X)
 
             print(orig_label, uap_label)
