@@ -22,7 +22,7 @@ MODELS = (
 XI_P = ((30, 2), )
 
 TRAINING_PATH = "imagenet_data/ILSVRC/Data/CLS-LOC/train"
-TRAINING_SIZE = 10_000 # Number of images to train on.
+TRAINING_SIZE = 500 # Number of images to train on.
 
 
 start = time.time()
