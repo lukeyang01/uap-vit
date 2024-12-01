@@ -4,6 +4,7 @@ from PIL import Image
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
 import torch
+import cv2
 
 class ImageNet100Dataset(Dataset):
     def __init__(self, root_dir, subset, labels_file, transform=None):
@@ -69,3 +70,96 @@ class ImageNet100Dataset(Dataset):
         
         numeric_label = self.numeric_labels[idx]
         return self.index_to_label[numeric_label]
+
+
+class ImageNet100ValidationDataset(Dataset):
+    def __init__(self, root_dir, subset, labels_file, transform=None):
+        """
+        Args:
+            root_dir (str): Root directory of the dataset.
+            subset (str): Subfolder for the dataset subset (e.g., train.X1, val.X).
+            labels_file (str): Path to the labels JSON file.
+            transform (callable, optional): Transformations to apply to the images.
+        """
+        self.root_dir = os.path.join(root_dir, subset)
+        self.transform = transform
+
+        # Load the labels JSON
+        with open(labels_file, 'r') as f:
+            self.labels_map = json.load(f)  # {"n1": "label1", "n2": "label2", ...}
+
+        # Dynamically create a mapping from n-prefixed labels to zero-based indices
+        self.label_to_index = {label: idx for idx, label in enumerate(self.labels_map.keys())}
+        self.index_to_label = {idx: self.labels_map[label] for label, idx in self.label_to_index.items()}
+
+        # Gather all image paths and corresponding zero-based numeric labels
+        self.image_paths = []
+
+        for class_folder in os.listdir(self.root_dir):
+            class_path = os.path.join(self.root_dir, class_folder)
+            if os.path.isdir(class_path):
+                for image_file in os.listdir(class_path):
+                    image_path = os.path.join(class_path, image_file)
+                    self.image_paths.append(image_path)
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        image_path = self.image_paths[idx]
+
+        # Load image
+        img = cv2.imread(image_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # imread uses bgr format by default
+        img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_CUBIC)
+
+        return img, 0
+
+    def get_label(self, idx):
+        """
+        Retrieve the human-readable label for a specific index.
+        
+        Args:
+            idx (int): Index of the item in the dataset.
+        
+        Returns:
+            str: Human-readable label for the given index.
+        """
+        if idx < 0 or idx >= len(self.numeric_labels):
+            raise IndexError(f"Index {idx} is out of range for dataset of size {len(self)}")
+        
+        numeric_label = self.numeric_labels[idx]
+        return self.index_to_label[numeric_label]
+
+class ImageNetValidationSet(Dataset):
+    def __init__(self, root_dir, transform=None):
+        """
+        Args:
+            root_dir (str): Root directory of the dataset.
+            subset (str): Subfolder for the dataset subset (e.g., train.X1, val.X).
+            labels_file (str): Path to the labels JSON file.
+            transform (callable, optional): Transformations to apply to the images.
+        """
+        self.root_dir = root_dir
+        self.transform = transform
+
+        # Gather all image paths and corresponding zero-based numeric labels
+        self.image_paths = []
+
+        for image_file in os.listdir(self.root_dir):
+            image_path = os.path.join(self.root_dir, image_file)
+            self.image_paths.append(image_path)
+                    
+
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        image_path = self.image_paths[idx]
+
+        # Load image
+        img = cv2.imread(image_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB) # imread uses bgr format by default
+        img = cv2.resize(img, (224, 224), interpolation=cv2.INTER_CUBIC)
+
+        return img, 0
