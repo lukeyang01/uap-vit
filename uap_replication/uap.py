@@ -10,10 +10,19 @@ from torch.utils.data import DataLoader
 def estimate_fooling_rate(dataset, clf, v):
     fooled = 0
     with torch.no_grad():
-        for img, _ in DataLoader(dataset):
+        for _, (img, _) in enumerate(DataLoader(dataset)):
             if clf(img).argmax() != clf(img+v).argmax():
                 fooled += 1
     return fooled / len(dataset)
+
+def compute_validation_rate(dataset, clf, v):
+    correct_pert = 0
+    with torch.no_grad():
+        for _, (img, truth) in enumerate(DataLoader(dataset)):
+            truth = int(truth)
+            if clf(img+v).argmax() == truth:
+                correct_pert += 1
+    return correct_pert / len(dataset)
 
 
 # See Algorithm 2 in arxiv.org/pdf/1511.04599.
